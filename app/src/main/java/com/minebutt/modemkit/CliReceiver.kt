@@ -50,6 +50,14 @@ class CliReceiver : BroadcastReceiver() {
                         if (toExec.isEmpty()) "error: missing exec command"
                         else su(toExec)
                     }
+                    "scan" -> {
+                        if (act == null) "Modem Kit is not running. Open the app once, then try again."
+                        else if (!intent.getBooleanExtra("yes", false)) "Refused: a location scan switches every band on for about 45 seconds, then puts your lock back. Run './modemkit-cli scan --yes' to confirm."
+                        else act.startScanFromCli()
+                    }
+                    "local" -> act?.scanSummary() ?: "Modem Kit is not running."
+                    "towers" -> act?.towersReport() ?: "Modem Kit is not running."
+                    "setting" -> handleSetting(act, intent.getStringExtra("key") ?: "", intent.getStringExtra("value") ?: "")
                     "set_target_ip" -> {
                         val ip = intent.getStringExtra("ip") ?: ""
                         act?.let {
@@ -74,7 +82,7 @@ class CliReceiver : BroadcastReceiver() {
                         }
                         "Hook updated: on=$on reason='$r' addr='$addr' apn='$apn'"
                     }
-                    else -> "unknown command '$cmd'. Valid: status, cell, bands, set_bands, restore_bands, set_mode, poll, logs, report, prepare, exec, set_target_ip, hook"
+                    else -> "unknown command '$cmd'. Valid: status, cell, bands, set_bands, restore_bands, set_mode, poll, logs, report, prepare, exec, set_target_ip, hook, scan, local, towers, setting"
                 }
 
                 writeOut("modemkit.out", out)
@@ -86,6 +94,25 @@ class CliReceiver : BroadcastReceiver() {
             }
         }.start()
     }
+
+    // Reads or changes the two band settings. Names: show_theory, show_local.
+    private fun handleSetting(act: MainActivity?, key: String, value: String): String {
+        val a = act ?: return "Modem Kit is not running. Open the app once, then try again."
+        if (key.isEmpty()) return settingsText(a)
+        if (key != "show_theory" && key != "show_local") return "Unknown setting '$key'. Valid: show_theory, show_local"
+        val on = when (value.lowercase()) {
+            "on", "true", "1" -> true
+            "off", "false", "0" -> false
+            else -> return "Value must be on or off."
+        }
+        a.prefs.edit().putBoolean(key, on).apply()
+        a.runOnUiThread { a.refreshLive() }
+        return settingsText(a)
+    }
+
+    private fun settingsText(a: MainActivity): String =
+        "show_theory = " + (if (a.prefs.getBoolean("show_theory", false)) "on" else "off") + "\n" +
+            "show_local = " + (if (a.prefs.getBoolean("show_local", false)) "on" else "off")
 
     private fun handleStatus(act: MainActivity?): String {
         val sb = StringBuilder()

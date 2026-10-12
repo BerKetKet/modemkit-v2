@@ -90,6 +90,10 @@ usage() {
     echo -e "  ${C_CYAN}poll${C_RESET}                   Trigger immediate background polling cycle in app"
     echo -e "  ${C_CYAN}prepare${C_RESET}                Verify/re-install helper wrappers & modem libraries"
     echo -e "  ${C_CYAN}raw <cmd>${C_RESET}              Execute arbitrary root command on the device"
+    echo -e "  ${C_CYAN}scan --yes${C_RESET}             Scan this location: all bands on for ~45 s, then the lock is put back"
+    echo -e "  ${C_CYAN}local${C_RESET}                  Last location scan, bands found here, and the settings that use them"
+    echo -e "  ${C_CYAN}towers${C_RESET}                 Towers this phone has measured, and how many the last scan missed"
+    echo -e "  ${C_CYAN}setting [name on|off]${C_RESET}  Show or change show_theory / show_local (no arguments: show both)"
     echo
 }
 
@@ -162,6 +166,21 @@ case "$CMD" in
         done
         echo -e "${C_BOLD}Updating LSPosed hook (on=$ON reason='$REASON' addr='$ADDR' apn='$APN')...${C_RESET}"
         send_cmd "hook" --ez on "$ON" --es reason "$REASON" --es addr "$ADDR" --es apn "$APN"
+        ;;
+    scan)
+        YES="false"
+        [ "$1" = "--yes" ] && YES="true"
+        echo -e "${C_BOLD}Location scan...${C_RESET}"
+        send_cmd "scan" --ez yes "$YES"
+        ;;
+    local)
+        send_cmd "local"
+        ;;
+    towers)
+        send_cmd "towers"
+        ;;
+    setting)
+        send_cmd "setting" --es key "${1:-}" --es value "${2:-}"
         ;;
     logs)
         send_cmd "logs"
