@@ -2,7 +2,7 @@ plugins { id("com.android.application"); id("org.jetbrains.kotlin.android") }
 android {
     namespace = "com.minebutt.modemkit"
     compileSdk = 34
-    defaultConfig { applicationId = "com.minebutt.modemkit"; minSdk = 26; targetSdk = 28; versionCode = 4; versionName = "3.1" }
+    defaultConfig { applicationId = "com.minebutt.modemkit"; minSdk = 26; targetSdk = 28; versionCode = 5; versionName = "3.1.1" }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
 }

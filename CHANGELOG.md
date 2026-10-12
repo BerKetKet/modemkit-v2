@@ -53,3 +53,9 @@ Major stability, modern Android 15 (Evolution X) compatibility, and remote autom
 - Removed magiskpolicy rules and chmod 666 /dev/diag from setup.
 - su() timeout really works (70 s default).
 - Home no longer shows ALL GOOD while the target IP is not active.
+
+## [3.1.1] - 2026-10-12
+- Band lock actually runs again: the uid fallback no longer injects a stray "dummy" argument (qband treated it as the command and silently did nothing).
+- A set that never printed "set result=" is now reported as a failure instead of a success.
+- Helper scripts are reinstalled automatically after an app update.
+- modemkit-cli quotes its arguments properly (raw and hook with spaces or empty values).
