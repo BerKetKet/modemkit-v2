@@ -109,6 +109,8 @@ class MainActivity : Activity() {
     private var pollCount = 0
     private var polling = false
     private var autoSetupTried = false
+    @Suppress("DEPRECATION")
+    private val toolsVer: Int get() = try { packageManager.getPackageInfo(packageName, 0).versionCode } catch (e: Exception) { 0 }
 
     // ---- small helpers ----
     internal fun pf(k: String, def: String = ""): String = prefs.getString("f_$k", def) ?: def
@@ -382,9 +384,9 @@ class MainActivity : Activity() {
         if (out.contains("@@reg") || out.contains("@@modem")) trackRadio()
 
         // The helper tools install themselves once, as soon as root works and they are missing.
-        if (root && tools == false && !autoSetupTried && !busy) {
+        if (root && (tools == false || prefs.getInt("tools_ver", 0) != toolsVer) && !autoSetupTried && !busy) {
             autoSetupTried = true
-            runRoot("Set up tools (automatic)", "echo setup done", setup = true)
+            runRoot("Set up tools (automatic)", "echo setup done", setup = true, done = { prefs.edit().putInt("tools_ver", toolsVer).apply() })
         }
         detectDrift()
         updaters.forEach { it() }
