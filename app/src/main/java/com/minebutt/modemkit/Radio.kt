@@ -11,7 +11,7 @@ object Radio {
 
     // What this Pixel 2 XL modem reported the first time. The app adds to this list whenever the modem
     // reports more, so only bands the modem has really shown are ever offered.
-    val defaultBands = intArrayOf(1, 3, 4, 5, 7, 8, 20, 28, 34, 38, 39, 40, 41, 66, 71, 250, 252, 255)
+    val defaultBands = intArrayOf(1, 3, 4, 5, 7, 8, 20, 28, 34, 38, 39, 40, 41, 66, 71)
 
     fun isInternal(b: Int) = b > REAL_MAX
 
@@ -25,17 +25,59 @@ object Radio {
         66 to "AWS-3", 71 to "600"
     )
 
+    // Plain-language notes, shown under each band on the Bands page.
+    private val facts = mapOf(
+        1 to "2100 MHz, FDD. Good capacity, shorter reach.",
+        2 to "1900 MHz, FDD. Medium reach and capacity.",
+        3 to "1800 MHz, FDD. Good balance of reach and capacity.",
+        4 to "1700/2100 MHz AWS, FDD. Medium reach and capacity.",
+        5 to "850 MHz, FDD. Long reach, good indoors, lower capacity.",
+        7 to "2600 MHz, FDD. High capacity, short reach.",
+        8 to "900 MHz, FDD. Long reach and good indoor coverage.",
+        12 to "700 MHz, FDD. Long reach and good indoor coverage.",
+        13 to "700 MHz, FDD. Long reach.",
+        14 to "700 MHz public safety, FDD. Reserved for emergency services.",
+        17 to "700 MHz, FDD. Long reach.",
+        18 to "800 MHz lower, FDD. Long reach.",
+        19 to "800 MHz upper, FDD. Long reach.",
+        20 to "800 MHz, FDD. Long reach and good indoor coverage.",
+        25 to "1900 MHz extended, FDD. Medium reach.",
+        26 to "850 MHz extended, FDD. Long reach.",
+        28 to "700 MHz, FDD. Long reach and good indoor coverage.",
+        29 to "700 MHz, download only. Adds speed alongside another band; cannot be used alone.",
+        30 to "2300 MHz, FDD. Short reach.",
+        32 to "1500 MHz, download only. Adds speed alongside another band; cannot be used alone.",
+        34 to "2000 MHz, TDD. Uplink and downlink share one frequency.",
+        38 to "2600 MHz, TDD. Large capacity, short reach.",
+        39 to "1900 MHz, TDD. Large capacity.",
+        40 to "2300 MHz, TDD. Large capacity.",
+        41 to "2500 MHz, TDD. Large capacity.",
+        42 to "3500 MHz, TDD. High capacity, short reach.",
+        43 to "3700 MHz, TDD. High capacity, short reach.",
+        46 to "5 GHz unlicensed, TDD. Only adds speed together with a licensed band.",
+        48 to "3500 MHz CBRS, TDD. Shared spectrum.",
+        66 to "1700/2100 MHz AWS-3, FDD. Medium reach and capacity.",
+        71 to "600 MHz, FDD. Very long reach and good indoor coverage."
+    )
+
+    fun describe(b: Int): String = when {
+        isInternal(b) -> "Not a real radio band. The modem uses this bit internally, so the app leaves it alone."
+        else -> facts[b] ?: "Band $b. No notes yet."
+    }
+
     fun label(b: Int): String = when {
         isInternal(b) -> "B$b · modem id"
         names.containsKey(b) -> "B$b · ${names[b]}"
         else -> "B$b"
     }
 
+    // Groups by what the band does, not by where it is used.
     val presets = linkedMapOf(
-        "Africa / ME" to intArrayOf(1, 3, 7, 8, 20, 28, 38, 40, 41),
-        "India" to intArrayOf(1, 3, 5, 8, 28, 40, 41),
-        "China" to intArrayOf(1, 3, 5, 8, 34, 38, 39, 40, 41),
-        "Low bands (reach)" to intArrayOf(5, 8, 12, 13, 17, 18, 19, 20, 26, 28, 71)
+        "Long reach (below 1 GHz)" to intArrayOf(5, 8, 12, 13, 17, 18, 19, 20, 26, 28, 71),
+        "Mid range (1 to 2 GHz)" to intArrayOf(1, 2, 3, 4, 25, 34, 66),
+        "High capacity (2 GHz and up)" to intArrayOf(7, 30, 38, 40, 41, 42, 43),
+        "FDD only" to intArrayOf(1, 2, 3, 4, 5, 7, 8, 12, 13, 17, 18, 19, 20, 25, 26, 28, 30, 66, 71),
+        "TDD only" to intArrayOf(34, 38, 39, 40, 41, 42, 43, 48)
     )
 
     // Four masks, or null if the text has none.

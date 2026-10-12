@@ -199,13 +199,20 @@ internal fun MainActivity.buildBands(): View {
     st.addM(btn("Refresh now") { pollNow() }, 8)
     s.addM(st, 10)
 
-    // Which bands the page lists. Theoretical bands stay hidden unless the setting is on.
-    // A band is shown when it is enabled, ticked, seen around you, or theory is on.
+    // Which bands the page lists. Enabled and ticked bands always show, so nothing chosen gets hidden.
+    // "Found here" (from a location scan) wins over the theory setting when it is on.
     val theoryOn = prefs.getBoolean("show_theory", false)
+    val localOn = prefs.getBoolean("show_local", false)
+    val localSet = (prefs.getString("local_bands", "") ?: "").split(",").mapNotNull { it.trim().toIntOrNull() }.toSet()
     fun shownBands(): List<Int> {
-        val seen = seenBands().map { it.band }.toSet()
+        val kn = knownBands()
+        if (localOn) return kn.filter { it in localSet }
+        if (theoryOn) return kn
+        // The enabled list only limits anything while some band is switched off.
         val en = enabledBands() ?: emptyList()
-        return knownBands().filter { theoryOn || it in en || it in selBands || it in seen }
+        val locked = kn.any { it !in en }
+        val seen = seenBands().map { it.band }.toSet()
+        return kn.filter { it in seen || (locked && it in en) }
     }
 
     // tick boxes live here so presets, sets and "seen" buttons can change them
@@ -218,7 +225,7 @@ internal fun MainActivity.buildBands(): View {
     }
     syncSel = { syncBoxes() }
     fun mkBox(n: Int): CheckBox = CheckBox(act).apply {
-        text = Radio.label(n)
+        text = Radio.label(n) + "\n" + Radio.describe(n)
         isChecked = n in act.selBands
         setOnCheckedChangeListener { _, on ->
             if (on) act.selBands.add(n) else act.selBands.remove(n)
@@ -226,7 +233,7 @@ internal fun MainActivity.buildBands(): View {
         }
     }
     fun setSel(list: Collection<Int>) {
-        val k = knownBands()
+        val k = shownBands().toSet()
         selBands.clear()
         for (b in list) if (b in k) selBands.add(b)
         if (selBands.any { it !in boxes }) { act.show(1); return }
@@ -266,18 +273,26 @@ internal fun MainActivity.buildBands(): View {
         c.addM(row(*bs.toTypedArray()), 4)
     }
     c.addM(row(
-        btn(if (theoryOn) "All modem bands" else "All seen bands") { setSel(if (theoryOn) knownBands() else shownBands()) },
+        btn(if (localOn) "All bands found here" else if (theoryOn) "All modem bands" else "All seen bands") {
+            setSel(if (localOn) localSet.toList() else if (theoryOn) knownBands() else shownBands())
+        },
         btn("Untick all") { setSel(emptyList()) }
     ), 4)
 
     val known = knownBands()
     val shown = shownBands()
+    selBands.retainAll(shown.toSet())
     val normal = shown.filter { !Radio.isInternal(it) }
     val extra = shown.filter { Radio.isInternal(it) }
-    c.addM(note("Showing ${shown.size} of ${known.size} bands. " +
-        (if (theoryOn) "Theoretical bands are on." else "Theoretical bands are off. Turn them on in Settings to see the rest.")), 4)
+    val how = when {
+        localOn && localSet.isEmpty() -> "“Show only bands found here” is on, but there is no scan yet. Scan this location in Settings."
+        localOn -> "Showing only the bands found at this location in the last scan."
+        theoryOn -> "Theoretical bands are on."
+        else -> "Theoretical bands are off. Turn them on in Settings to see the rest."
+    }
+    c.addM(note("Showing ${shown.size} of ${known.size} bands. $how"), 4)
     c.addM(label("Bands", 14f, true, Pal.primary), 12)
-    val grid = GridLayout(this).apply { columnCount = 2 }
+    val grid = GridLayout(this).apply { columnCount = 1 }
     for (n in normal) {
         val b = mkBox(n)
         boxes[n] = b
@@ -287,7 +302,7 @@ internal fun MainActivity.buildBands(): View {
     if (extra.isNotEmpty()) {
         c.addM(label("Extra ids the modem lists", 14f, true, Pal.muted), 10)
         c.addM(note("These are not normal bands you choose between. Leave them as they are; Restore puts them back."), 0)
-        val g2 = GridLayout(this).apply { columnCount = 2 }
+        val g2 = GridLayout(this).apply { columnCount = 1 }
         for (n in extra) {
             val b = mkBox(n)
             boxes[n] = b

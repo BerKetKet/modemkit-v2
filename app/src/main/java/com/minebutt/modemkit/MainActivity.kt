@@ -389,6 +389,7 @@ class MainActivity : Activity() {
             mon.modem = CellScan.parseModem(mo)
         }
         if (out.contains("@@reg") || out.contains("@@modem")) trackRadio()
+        if (out.contains("@@modem")) recordTowers()
 
         // The helper tools install themselves once, as soon as root works and they are missing.
         if (root && (tools == false || prefs.getInt("tools_ver", 0) != toolsVer) && !autoSetupTried && !busy) {
@@ -649,6 +650,7 @@ class MainActivity : Activity() {
         root.addView(nav)
         setContentView(root)
         show(0)
+        scanUi.postDelayed({ recoverScan() }, 8000)
         if (!prefs.getBoolean("welcomed", false)) {
             prefs.edit().putBoolean("welcomed", true).apply()
             showHelp(0)
