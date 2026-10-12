@@ -28,7 +28,11 @@ class HookEntry : IXposedHookLoadPackage {
             override fun beforeHookedMethod(p: MethodHookParam) {
                 try {
                     val a = p.args
-                    val apn = try { XposedHelpers.callMethod(a[1], "getApn") as? String ?: "" } catch (e: Throwable) { "?" }
+                    val apn = try {
+                        (XposedHelpers.callMethod(a[1], "getApn") as? String)
+                            ?: (XposedHelpers.callMethod(XposedHelpers.callMethod(a[1], "getApnSetting"), "getApnName") as? String)
+                            ?: ""
+                    } catch (e: Throwable) { "?" }
                     val oldReason = a[4] as Int
                     val sb = StringBuilder("setupDataCall apn=$apn reason=$oldReason lp=${a[5]}")
                     val filter = prop("debug.modemkit.apn")
@@ -36,11 +40,16 @@ class HookEntry : IXposedHookLoadPackage {
                         prop("debug.modemkit.reason").toIntOrNull()?.let { a[4] = it; sb.append(" -> reason=$it") }
                         val addr = prop("debug.modemkit.addr")
                         if (addr.isNotEmpty()) {
-                            val lp = XposedHelpers.newInstance(XposedHelpers.findClass("android.net.LinkProperties", null))
                             val la = XposedHelpers.newInstance(XposedHelpers.findClass("android.net.LinkAddress", null),
                                 InetAddress.getByName(addr), 32)
-                            XposedHelpers.callMethod(lp, "addLinkAddress", la)
-                            a[5] = lp
+                            val existingLp = a[5]
+                            if (existingLp != null) {
+                                XposedHelpers.callMethod(existingLp, "addLinkAddress", la)
+                            } else {
+                                val lp = XposedHelpers.newInstance(XposedHelpers.findClass("android.net.LinkProperties", null))
+                                XposedHelpers.callMethod(lp, "addLinkAddress", la)
+                                a[5] = lp
+                            }
                             sb.append(" -> addr=$addr")
                         }
                     }

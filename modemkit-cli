@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Modem Kit v3 — PC CLI Controller & Debugger
+# ==============================================================================
+# Remote command-line interface for controlling Modem Kit on rooted Pixel 2 XL
+# (Android 15 Evolution X / Qualcomm MSM8998) over adb.
+# ==============================================================================
+
+set -eo pipefail
+
+ADB="${ADB:-adb}"
+TARGET_PKG="com.minebutt.modemkit"
+RECEIVER="$TARGET_PKG/.CliReceiver"
+ACTION="com.minebutt.modemkit.CLI"
+TMP_DIR="/data/local/tmp"
+
+# Colors
+C_BOLD="\033[1m"
+C_GREEN="\033[32m"
+C_CYAN="\033[36m"
+C_YELLOW="\033[33m"
+C_RED="\033[31m"
+C_RESET="\033[0m"
+
+die() {
+    echo -e "${C_RED}Error:${C_RESET} $*" >&2
+    exit 1
+}
+
+check_device() {
+    if ! "$ADB" get-state >/dev/null 2>&1; then
+        die "No adb device attached or authorized. Run '$ADB devices' to check."
+    fi
+}
+
+send_cmd() {
+    local cmd="$1"
+    shift
+    local extras=("$@")
+
+    # Send broadcast to CliReceiver
+    "$ADB" shell am broadcast -a "$ACTION" -n "$RECEIVER" --es cmd "$cmd" "${extras[@]}" >/dev/null 2>&1 || true
+    
+    # Allow command to execute and read output
+    sleep 0.4
+    local out
+    out=$("$ADB" shell su -c "cat $TMP_DIR/modemkit.out 2>/dev/null" || true)
+    if [ -n "$out" ]; then
+        echo "$out"
+    fi
+}
+
+usage() {
+    echo -e "${C_BOLD}Modem Kit v3 — PC Command Line Interface${C_RESET}"
+    echo
+    echo "Usage: ./modemkit-cli <command> [arguments...]"
+    echo
+    echo -e "${C_BOLD}Commands:${C_RESET}"
+    echo -e "  ${C_CYAN}status${C_RESET}                 Show full live radio status, active bands, cell & health"
+    echo -e "  ${C_CYAN}cell${C_RESET}                   Perform cell scan (NAS Get Cell Loc: serving & neighbors)"
+    echo -e "  ${C_CYAN}bands${C_RESET}                  Show enabled bands, saved baseline original bands & mode"
+    echo -e "  ${C_CYAN}lock <bands> [--perm]${C_RESET}  Lock modem to comma-separated bands (e.g. lock 3,7,20)"
+    echo -e "  ${C_CYAN}restore [--perm]${C_RESET}       Restore modem original baseline bands (qband.orig)"
+    echo -e "  ${C_CYAN}mode <auto|lte|3g2g>${C_RESET}  Change network RAT mode preference"
+    echo -e "  ${C_CYAN}ip${C_RESET}                     Show mobile IP interfaces and connection state"
+    echo -e "  ${C_CYAN}logs${C_RESET}                   Dump recent in-app activity and diagnostic logs"
+    echo -e "  ${C_CYAN}report${C_RESET}                 Generate and display complete bug report snapshot"
+    echo -e "  ${C_CYAN}poll${C_RESET}                   Trigger immediate background polling cycle in app"
+    echo -e "  ${C_CYAN}prepare${C_RESET}                Verify/re-install helper wrappers & modem libraries"
+    echo -e "  ${C_CYAN}raw <cmd>${C_RESET}              Execute arbitrary root command on the device"
+    echo
+}
+
+check_device
+
+CMD="${1:-status}"
+shift || true
+
+case "$CMD" in
+    status)
+        echo -e "${C_BOLD}Fetching Modem Kit Status...${C_RESET}"
+        send_cmd "status"
+        ;;
+    cell)
+        echo -e "${C_BOLD}Scanning LTE Cells (NAS Get Cell Location)...${C_RESET}"
+        send_cmd "cell"
+        ;;
+    bands)
+        echo -e "${C_BOLD}Querying Modem Band Configuration...${C_RESET}"
+        send_cmd "bands"
+        ;;
+    lock)
+        BANDS="$1"
+        [ -z "$BANDS" ] && die "Usage: ./modemkit-cli lock <bands> (e.g. lock 3,7,20 [--perm])"
+        PERM="false"
+        [ "$2" = "--perm" ] && PERM="true"
+        echo -e "${C_BOLD}Locking bands to: $BANDS (permanent=$PERM)...${C_RESET}"
+        send_cmd "set_bands" --es bands "$BANDS" --ez perm "$PERM"
+        ;;
+    restore)
+        PERM="false"
+        [ "$1" = "--perm" ] && PERM="true"
+        echo -e "${C_BOLD}Restoring original baseline bands (permanent=$PERM)...${C_RESET}"
+        send_cmd "restore_bands" --ez perm "$PERM"
+        ;;
+    mode)
+        MODE="$1"
+        [ -z "$MODE" ] && die "Usage: ./modemkit-cli mode <auto|lte|3g2g> [--perm]"
+        PERM="false"
+        [ "$2" = "--perm" ] && PERM="true"
+        echo -e "${C_BOLD}Setting network mode to: $MODE (permanent=$PERM)...${C_RESET}"
+        send_cmd "set_mode" --es mode "$MODE" --ez perm "$PERM"
+        ;;
+    ip)
+        echo -e "${C_BOLD}Active Mobile IP Addresses:${C_RESET}"
+        "$ADB" shell su -c "ip -o -4 addr show | grep -E 'rmnet|pdp' || ip -o -4 addr show"
+        ;;
+    logs)
+        send_cmd "logs"
+        ;;
+    report)
+        echo -e "${C_BOLD}Generating Full Diagnostic Report...${C_RESET}"
+        send_cmd "report"
+        ;;
+    poll)
+        echo -e "${C_BOLD}Triggering app poll cycle...${C_RESET}"
+        send_cmd "poll"
+        ;;
+    prepare)
+        echo -e "${C_BOLD}Preparing helper wrappers and vendor libraries...${C_RESET}"
+        send_cmd "prepare"
+        ;;
+    raw|exec)
+        [ -z "$1" ] && die "Usage: ./modemkit-cli raw \"<command>\""
+        send_cmd "exec" --es exec "$*"
+        ;;
+    -h|--help|help)
+        usage
+        ;;
+    *)
+        usage
+        die "Unknown command: $CMD"
+        ;;
+esac

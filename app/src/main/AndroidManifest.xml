@@ -4,7 +4,7 @@
         <meta-data android:name="xposedmodule" android:value="true" />
         <meta-data android:name="xposeddescription" android:value="Logs and overrides the data-call reason and address in com.android.phone" />
         <meta-data android:name="xposedminversion" android:value="93" />
-        <meta-data android:name="xposedscope" android:value="com.android.phone" />
+        <meta-data android:name="xposedscope" android:resource="@array/xposedscope" />
         <activity android:name=".MainActivity" android:exported="true"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize|uiMode">
             <intent-filter>
@@ -12,5 +12,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <receiver android:name=".CliReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="com.minebutt.modemkit.CLI" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

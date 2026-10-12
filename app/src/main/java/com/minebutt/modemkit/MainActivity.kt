@@ -72,10 +72,14 @@ class Mon {
 }
 
 class MainActivity : Activity() {
+    companion object {
+        var instance: MainActivity? = null
+    }
+
     internal val dir = "/data/local/tmp"
-    internal val qwds = "timeout 60 env LD_LIBRARY_PATH=$dir/q $dir/qwds"
-    internal val qband = "timeout 60 env LD_LIBRARY_PATH=$dir/q $dir/qband"
-    private val qbandCell = "timeout 10 env LD_LIBRARY_PATH=$dir/q $dir/qband cell 2>&1"
+    internal val qwds = "timeout 60 $dir/qwds_run"
+    internal val qband = "timeout 60 $dir/qband_run"
+    private val qbandCell = "timeout 10 $dir/qband_run cell 2>&1"
     internal val prefs: SharedPreferences by lazy { getSharedPreferences("modemkit", Context.MODE_PRIVATE) }
     internal val mon = Mon()
     internal val logs = ArrayList<LogEntry>()
@@ -122,14 +126,14 @@ class MainActivity : Activity() {
     internal fun su(cmd: String): String = try {
         val p = ProcessBuilder("su", "-c", cmd).redirectErrorStream(true).start()
         val out = p.inputStream.bufferedReader().readText()
-        p.waitFor()
+        p.waitFor(15, java.util.concurrent.TimeUnit.SECONDS)
         out
     } catch (e: Exception) { "error: ${e.message}" }
 
     private val atSh = "#!/system/bin/sh\n: > $dir/at.out\ncat \"\$1\" > $dir/at.out 2>/dev/null &\np=\$!\n" +
         "printf '%s\\r' \"\$2\" > \"\$1\"\nsleep \${3:-2}\nkill \$p 2>/dev/null\ncat $dir/at.out\n"
 
-    private fun prepare(): String {
+    internal fun prepare(): String {
         val rep = StringBuilder()
         for (n in listOf("qwds", "qband")) {
             try {
@@ -143,8 +147,21 @@ class MainActivity : Activity() {
         }
         try {
             val at = File(cacheDir, "at.sh").apply { writeText(atSh) }
-            rep.append(su("mkdir -p $dir/q 2>&1; cp /vendor/lib64/libqmi*.so $dir/q/ 2>&1; cp ${at.absolutePath} $dir/at.sh 2>&1; " +
-                "chmod 755 $dir/at.sh 2>&1; echo \"modem libraries copied: \$(ls $dir/q | wc -l)\"").trim())
+            val qbRun = "#!/system/bin/sh\nexec su 1001 -c \"env LD_LIBRARY_PATH=$dir/q $dir/qband \\\"\\\$@\\\"\" dummy \"\$@\"\n"
+            val qwRun = "#!/system/bin/sh\nexec su 1001 -c \"env LD_LIBRARY_PATH=$dir/q $dir/qwds \\\"\\\$@\\\"\" dummy \"\$@\"\n"
+            val fQb = File(cacheDir, "qband_run").apply { writeText(qbRun) }
+            val fQw = File(cacheDir, "qwds_run").apply { writeText(qwRun) }
+
+            val setupCmd = "mkdir -p $dir/q 2>&1; " +
+                "for f in /vendor/lib64/libqmi*.so /vendor/lib64/libdiag.so /vendor/lib64/libdsutils.so /vendor/lib64/libidl.so /vendor/lib64/libmdmdetect.so; do " +
+                "[ -e \$f ] && cp \$f $dir/q/ 2>&1; done; " +
+                "chmod 644 $dir/q/*.so 2>&1; chmod 666 /dev/diag 2>/dev/null; " +
+                "cp ${at.absolutePath} $dir/at.sh 2>&1; chmod 755 $dir/at.sh 2>&1; " +
+                "cp ${fQb.absolutePath} $dir/qband_run 2>&1; chmod 755 $dir/qband_run 2>&1; " +
+                "cp ${fQw.absolutePath} $dir/qwds_run 2>&1; chmod 755 $dir/qwds_run 2>&1; " +
+                "magiskpolicy --live \"allow shell shell socket { create read write ioctl }\" \"allow shell sysfs_msm_subsys dir { read open search }\" \"allow shell vendor_file file { read open getattr execute }\" 2>/dev/null; " +
+                "echo \"modem libraries copied: \$(ls $dir/q | wc -l)\""
+            rep.append(su(setupCmd).trim())
         } catch (e: Exception) { rep.append("helper script failed: ${e.message}") }
         return rep.toString().trim()
     }
@@ -277,7 +294,7 @@ class MainActivity : Activity() {
         sb.append("echo @@net; getprop gsm.operator.alpha; getprop gsm.network.type\n")
         sb.append("echo @@data; dumpsys telephony.registry | grep -m1 -oE 'mDataConnectionState=-?[0-9]+'\n")
         sb.append("echo @@hook; getprop debug.modemkit.on; getprop debug.modemkit.reason; getprop debug.modemkit.addr; getprop debug.modemkit.apn\n")
-        sb.append("echo @@tools; [ -x $dir/qwds ] && [ -x $dir/qband ] && [ -d $dir/q ] && echo yes || echo no\n")
+        sb.append("echo @@tools; [ -x $dir/qwds ] && [ -x $dir/qband ] && [ -x $dir/qband_run ] && [ -x $dir/qwds_run ] && [ -d $dir/q ] && echo yes || echo no\n")
         if (heavy) {
             sb.append("echo @@apn; content query --uri content://telephony/carriers/preferapn --projection apn 2>/dev/null\n")
             sb.append("echo @@seen; logcat -d -s MODEMKIT:I | tail -n 5\n")
@@ -576,6 +593,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        instance = this
         loadLogs()
         profiles = Profiles.load(this)
         val savedName = Profiles.activeName(this)
@@ -616,4 +634,8 @@ class MainActivity : Activity() {
 
     override fun onResume() { super.onResume(); handler.post(pollTask) }
     override fun onPause() { super.onPause(); handler.removeCallbacks(pollTask); saveLogs() }
+    override fun onDestroy() {
+        if (instance === this) instance = null
+        super.onDestroy()
+    }
 }

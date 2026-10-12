@@ -73,7 +73,7 @@ private fun MainActivity.keepSection(s: LinearLayout) {
     c3.addM(btn("Test from the target IP") {
         val ip = valid("ip", ipRe, "target IP (on Home)"); val t = valid("target", nameRe, "ping address")
         if (ip != null && t != null) runRoot("Test from $ip",
-            "ping -c 3 -W 2 -I $ip $t | tail -n 2; echo \"public address seen by websites: \$(curl -s -m 8 --interface $ip https://ifconfig.me)\"")
+            "ping -c 3 -W 2 -I $ip $t | tail -n 2; pub=\$(curl -s -m 8 --interface $ip https://ifconfig.me 2>/dev/null || toybox wget -q -O - https://ifconfig.me 2>/dev/null || echo 'curl/wget unavailable'); echo \"public address seen by websites: \$pub\"")
     }, 6)
     c3.addM(btn("Remove alias") {
         val ip = valid("ip", ipRe, "target IP (on Home)"); val ifc = valid("iface", nameRe, "interface")

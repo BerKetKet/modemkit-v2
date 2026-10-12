@@ -155,7 +155,7 @@ object CellScan {
             voiceState = reVoice.find(svc)?.groupValues?.get(2),
             carrier = reCarrier.find(svc)?.groupValues?.get(1)?.trim(),
             ca = reCa.find(svc)?.groupValues?.get(1)?.let { it == "true" },
-            serving = serving,
+            serving = serving ?: cells.firstOrNull { it.registered },
             cells = cells
         )
     }
