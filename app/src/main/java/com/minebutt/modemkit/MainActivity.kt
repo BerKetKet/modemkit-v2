@@ -585,6 +585,21 @@ class MainActivity : Activity() {
             .setPositiveButton("Close", null).show()
     }
 
+    // ---- settings ----
+    internal fun showSettings() {
+        cur = -1
+        updaters.clear()
+        resultBox = null
+        syncSel = null
+        titleView.text = "Settings"
+        content.removeAllViews()
+        content.addView(ScrollView(this).apply { addView(buildSettings()) })
+        tabViews.forEach { t ->
+            t.setTextColor(Pal.muted)
+            t.typeface = Typeface.DEFAULT
+        }
+    }
+
     // ---- shell ----
     internal fun show(i: Int) {
         cur = i
@@ -617,6 +632,7 @@ class MainActivity : Activity() {
         }
         titleView = TextView(this).apply { textSize = 20f; setTextColor(android.graphics.Color.WHITE); typeface = Typeface.DEFAULT_BOLD }
         top.addView(titleView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        top.addView(btn("⚙ Settings") { showSettings() })
         top.addView(btn("? Help") { showHelp(helpIndex()) })
         root.addView(top)
         content = FrameLayout(this)

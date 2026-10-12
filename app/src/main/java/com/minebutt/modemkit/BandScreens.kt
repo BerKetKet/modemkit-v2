@@ -199,6 +199,15 @@ internal fun MainActivity.buildBands(): View {
     st.addM(btn("Refresh now") { pollNow() }, 8)
     s.addM(st, 10)
 
+    // Which bands the page lists. Theoretical bands stay hidden unless the setting is on.
+    // A band is shown when it is enabled, ticked, seen around you, or theory is on.
+    val theoryOn = prefs.getBoolean("show_theory", false)
+    fun shownBands(): List<Int> {
+        val seen = seenBands().map { it.band }.toSet()
+        val en = enabledBands() ?: emptyList()
+        return knownBands().filter { theoryOn || it in en || it in selBands || it in seen }
+    }
+
     // tick boxes live here so presets, sets and "seen" buttons can change them
     val boxes = HashMap<Int, CheckBox>()
     fun syncBoxes() {
@@ -220,6 +229,7 @@ internal fun MainActivity.buildBands(): View {
         val k = knownBands()
         selBands.clear()
         for (b in list) if (b in k) selBands.add(b)
+        if (selBands.any { it !in boxes }) { act.show(1); return }
         syncBoxes()
         refreshLive()
     }
@@ -256,14 +266,17 @@ internal fun MainActivity.buildBands(): View {
         c.addM(row(*bs.toTypedArray()), 4)
     }
     c.addM(row(
-        btn("All modem bands") { setSel(knownBands()) },
+        btn(if (theoryOn) "All modem bands" else "All seen bands") { setSel(if (theoryOn) knownBands() else shownBands()) },
         btn("Untick all") { setSel(emptyList()) }
     ), 4)
 
     val known = knownBands()
-    val normal = known.filter { !Radio.isInternal(it) }
-    val extra = known.filter { Radio.isInternal(it) }
-    c.addM(label("Bands the modem reported", 14f, true, Pal.primary), 12)
+    val shown = shownBands()
+    val normal = shown.filter { !Radio.isInternal(it) }
+    val extra = shown.filter { Radio.isInternal(it) }
+    c.addM(note("Showing ${shown.size} of ${known.size} bands. " +
+        (if (theoryOn) "Theoretical bands are on." else "Theoretical bands are off. Turn them on in Settings to see the rest.")), 4)
+    c.addM(label("Bands", 14f, true, Pal.primary), 12)
     val grid = GridLayout(this).apply { columnCount = 2 }
     for (n in normal) {
         val b = mkBox(n)
