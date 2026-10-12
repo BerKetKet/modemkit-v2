@@ -38,15 +38,30 @@ send_cmd() {
     shift
     local extras=("$@")
 
+    # Remove previous output file
+    "$ADB" shell su -c "rm -f $TMP_DIR/modemkit.out" >/dev/null 2>&1 || true
+
     # Send broadcast to CliReceiver
     "$ADB" shell am broadcast -a "$ACTION" -n "$RECEIVER" --es cmd "$cmd" "${extras[@]}" >/dev/null 2>&1 || true
     
-    # Allow command to execute and read output
-    sleep 0.4
+    # Wait for output file (up to 15s)
+    local i=0
+    while [ $i -lt 30 ]; do
+        sleep 0.4
+        i=$((i + 1))
+        local exists
+        exists=$("$ADB" shell su -c "[ -f $TMP_DIR/modemkit.out ] && echo yes || echo no" 2>/dev/null | tr -d '\r\n')
+        if [ "$exists" = "yes" ]; then
+            break
+        fi
+    done
+
     local out
     out=$("$ADB" shell su -c "cat $TMP_DIR/modemkit.out 2>/dev/null" || true)
     if [ -n "$out" ]; then
         echo "$out"
+    else
+        echo "(no response received from app within timeout)"
     fi
 }
 

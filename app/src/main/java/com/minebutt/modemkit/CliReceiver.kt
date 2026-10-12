@@ -15,7 +15,10 @@ class CliReceiver : BroadcastReceiver() {
     private val tag = "MODEMKIT_CLI"
     private val dir = "/data/local/tmp"
 
+    private lateinit var ctx: Context
+
     override fun onReceive(context: Context, intent: Intent) {
+        ctx = context
         val cmd = intent.getStringExtra("cmd") ?: intent.getStringExtra("action") ?: "status"
         Log.i(tag, "Received CLI command: $cmd")
 
@@ -155,9 +158,11 @@ class CliReceiver : BroadcastReceiver() {
 
     private fun writeOut(fileName: String, content: String) {
         try {
-            val f = File(dir, fileName)
-            f.writeText(content)
-            su("chmod 644 ${f.absolutePath}")
-        } catch (_: Exception) {}
+            val local = File(ctx.filesDir, fileName)
+            local.writeText(content)
+            su("cp ${local.absolutePath} $dir/$fileName 2>/dev/null; chmod 666 $dir/$fileName 2>/dev/null")
+        } catch (e: Exception) {
+            Log.e(tag, "writeOut error: ${e.message}")
+        }
     }
 }
