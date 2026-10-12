@@ -123,11 +123,19 @@ class MainActivity : Activity() {
             .setPositiveButton(yes) { _, _ -> onYes() }.setNegativeButton("Cancel", null).show()
     }
 
-    internal fun su(cmd: String): String = try {
+    internal fun su(cmd: String, seconds: Long = 70): String = try {
         val p = ProcessBuilder("su", "-c", cmd).redirectErrorStream(true).start()
-        val out = p.inputStream.bufferedReader().readText()
-        p.waitFor(15, java.util.concurrent.TimeUnit.SECONDS)
-        out
+        val buf = StringBuilder()
+        val t = Thread { try { buf.append(p.inputStream.bufferedReader().readText()) } catch (_: Exception) {} }
+        t.start()
+        t.join(seconds * 1000)
+        if (t.isAlive) {
+            p.destroyForcibly()
+            "error: timed out after ${seconds}s\n" + synchronized(buf) { buf.toString() }
+        } else {
+            p.waitFor()
+            buf.toString()
+        }
     } catch (e: Exception) { "error: ${e.message}" }
 
     private val atSh = "#!/system/bin/sh\n: > $dir/at.out\ncat \"\$1\" > $dir/at.out 2>/dev/null &\np=\$!\n" +
