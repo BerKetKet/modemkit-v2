@@ -46,3 +46,10 @@ Major stability, modern Android 15 (Evolution X) compatibility, and remote autom
   - `./modemkit-cli report` — Generate complete diagnostic report
   - `./modemkit-cli poll` — Trigger background poll
   - `./modemkit-cli raw "<cmd>"` — Execute arbitrary root command
+
+## [3.1] - 2026-10-12
+- CliReceiver now requires android.permission.DUMP (adb shell only).
+- qband_run/qwds_run: root first, uid 1001 only as a fallback.
+- Removed magiskpolicy rules and chmod 666 /dev/diag from setup.
+- su() timeout really works (70 s default).
+- Home no longer shows ALL GOOD while the target IP is not active.
