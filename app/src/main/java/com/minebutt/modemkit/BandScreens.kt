@@ -151,10 +151,13 @@ private fun seenLabel(x: MainActivity.Seen): String {
 
 // Runs a qband command that changes bands or mode, then reads the answer back into the page.
 // permEffect: +1 a permanent lock was written, -1 a permanent restore was written, 0 leave the flag alone.
+// A set command that never printed "set result=" did not run at all (wrong argv, wrapper problem), which must not count as success.
+private fun setNeverRan(cmd: String, out: String) = cmd.contains(" set ") && !out.contains("set result=")
+
 internal fun MainActivity.runBands(title: String, cmd: String, perm: Boolean, permEffect: Int, repair: Boolean = false, tries: Int = 1) {
-    runRoot(title, cmd, check = { bandBad(it) }) done@{ out ->
+    runRoot(title, cmd, check = { bandBad(it) || setNeverRan(cmd, it) }) done@{ out ->
         mon.lastOwnWrite = System.currentTimeMillis()
-        val bad = bandBad(out)
+        val bad = bandBad(out) || setNeverRan(cmd, out)
         if (bad && tries > 0) {
             addLog("info", "Retrying: $title", "The first try failed. Trying once more in 3 seconds.")
             resultBox?.text = "✖ $title failed. Retrying once in 3 seconds…"
