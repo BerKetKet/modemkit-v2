@@ -130,6 +130,32 @@ case "$CMD" in
         echo -e "${C_BOLD}Active Mobile IP Addresses:${C_RESET}"
         "$ADB" shell su -c "ip -o -4 addr show | grep -E 'rmnet|pdp' || ip -o -4 addr show"
         ;;
+    target-ip)
+        IP="$1"
+        [ -z "$IP" ] && die "Usage: ./modemkit-cli target-ip <ip-address>"
+        echo -e "${C_BOLD}Setting target IP to: $IP...${C_RESET}"
+        send_cmd "set_target_ip" --es ip "$IP"
+        ;;
+    hook)
+        STATE="$1"
+        shift || true
+        [ -z "$STATE" ] && die "Usage: ./modemkit-cli hook <on|off> [--reason 1|2|3] [--addr <ip>] [--apn <filter>]"
+        ON="false"
+        [ "$STATE" = "on" ] && ON="true"
+        REASON=""
+        ADDR=""
+        APN=""
+        while [ $# -gt 0 ]; do
+            case "$1" in
+                --reason) REASON="$2"; shift 2 ;;
+                --addr) ADDR="$2"; shift 2 ;;
+                --apn) APN="$2"; shift 2 ;;
+                *) shift ;;
+            esac
+        done
+        echo -e "${C_BOLD}Updating LSPosed hook (on=$ON reason='$REASON' addr='$ADDR' apn='$APN')...${C_RESET}"
+        send_cmd "hook" --ez on "$ON" --es reason "$REASON" --es addr "$ADDR" --es apn "$APN"
+        ;;
     logs)
         send_cmd "logs"
         ;;

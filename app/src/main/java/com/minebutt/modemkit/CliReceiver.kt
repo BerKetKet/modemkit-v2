@@ -50,7 +50,31 @@ class CliReceiver : BroadcastReceiver() {
                         if (toExec.isEmpty()) "error: missing exec command"
                         else su(toExec)
                     }
-                    else -> "unknown command '$cmd'. Valid: status, cell, bands, set_bands, restore_bands, set_mode, poll, logs, report, prepare, exec"
+                    "set_target_ip" -> {
+                        val ip = intent.getStringExtra("ip") ?: ""
+                        act?.let {
+                            it.prefs.edit().putString("f_ip", ip).apply()
+                            it.runOnUiThread { it.refreshLive(); it.pollNow() }
+                        }
+                        "Target IP updated to '$ip'"
+                    }
+                    "hook" -> {
+                        val on = intent.getBooleanExtra("on", false)
+                        val r = intent.getStringExtra("reason") ?: ""
+                        val addr = intent.getStringExtra("addr") ?: ""
+                        val apn = intent.getStringExtra("apn") ?: ""
+                        val cmdStr = "setprop debug.modemkit.on ${if (on) 1 else 0}; " +
+                            "setprop debug.modemkit.reason '$r'; " +
+                            "setprop debug.modemkit.addr '$addr'; " +
+                            "setprop debug.modemkit.apn '$apn'"
+                        su(cmdStr)
+                        act?.let {
+                            it.prefs.edit().putBoolean("hook_on", on).apply()
+                            it.runOnUiThread { it.pollNow() }
+                        }
+                        "Hook updated: on=$on reason='$r' addr='$addr' apn='$apn'"
+                    }
+                    else -> "unknown command '$cmd'. Valid: status, cell, bands, set_bands, restore_bands, set_mode, poll, logs, report, prepare, exec, set_target_ip, hook"
                 }
 
                 writeOut("modemkit.out", out)
