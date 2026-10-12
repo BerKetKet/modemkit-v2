@@ -32,7 +32,7 @@ Control and debug the app directly from your PC terminal over adb:
 Enable the "Modem Kit" module in LSPosed. On v3, the scope **com.android.phone** is automatically detected via `@array/xposedscope`. The hook uses `debug.modemkit.*` properties and logcat tag `MODEMKIT`.
 
 ## Android 15 Architecture in v3
-* **Qualcomm IPC Router Security**: QMI transactions require `AID_RADIO` (`UID 1001`). Helper wrapper scripts (`qband_run` and `qwds_run`) execute via `su 1001 -c` while retaining root SELinux domains.
+* **Helper scripts**: `qband_run` and `qwds_run` run the QMI tools as root and retry with `QUID=1001` (the tools own privilege drop) only if the QMI call is refused. Reads and band sets work as root on the Pixel 2 XL, so the earlier theory that QMI needs UID 1001 was wrong.
 * **Vendor Libraries**: Automatically copies required Qualcomm vendor libraries (`libqmi*.so`, `libdiag.so`, `libdsutils.so`, `libidl.so`, `libmdmdetect.so`) into `/data/local/tmp/q` to satisfy Android 15 dynamic linker namespace isolation.
 * **Handover Preservation**: `LinkProperties` instances are mutated instead of clobbered during mobile data handovers.
 

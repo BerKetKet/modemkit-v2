@@ -10,6 +10,9 @@ Major stability, modern Android 15 (Evolution X) compatibility, and remote autom
 ### Key Improvements & Fixes
 
 #### 1. Android 15 & Qualcomm Kernel QMI Security (`AID_RADIO` UID 1001)
+
+> **Erratum (3.1.1):** the root cause below was never verified and is wrong. `get` works as root, with `QUID=1001` and with `su 1001`. The band lock failed because the `su 1001` wrapper passed a stray `dummy` word to `qband` as its command, so the set never ran, and the app reported success anyway. See 3.1.1.
+
 * **Root Cause Fixed:** On Qualcomm basebands running Linux kernels, the MSM IPC Router (`net/ipc_router/ipc_router_core.c` / `msm_ipc_router_security.c`) restricts `sendto()` on `AF_MSM_IPC` (socket family 27) QMI ports to `AID_RADIO` (`UID 1001`) or `AID_SYSTEM` (`UID 1000`). Executing `qband` or `qwds` purely as root (`UID 0`) resulted in `send failed rc=-16` (`-EPERM: permission failure for qband`).
 * **Solution:** Introduced dedicated executable runner wrappers (`/data/local/tmp/qband_run` and `/data/local/tmp/qwds_run`) that launch under `su 1001 -c` while preserving the unconfined root SELinux domain (`u:r:magisk:s0`). This guarantees full access to both QMI and IPC sockets across all operations.
 
@@ -59,3 +62,6 @@ Major stability, modern Android 15 (Evolution X) compatibility, and remote autom
 - A set that never printed "set result=" is now reported as a failure instead of a success.
 - Helper scripts are reinstalled automatically after an app update.
 - modemkit-cli quotes its arguments properly (raw and hook with spaces or empty values).
+
+## [Unreleased]
+- Docs: corrected the false UID 1001 root cause in the 3.0 notes and the README.
