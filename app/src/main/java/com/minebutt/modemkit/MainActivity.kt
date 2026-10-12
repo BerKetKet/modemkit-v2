@@ -450,6 +450,8 @@ class MainActivity : Activity() {
         val target = pf("ip")
         val main = mainAddr()
         if (target.isNotEmpty() && main?.second == target) w.add(Warn(0, "You already have your target IP, nothing to do.", keepHome))
+        if (mon.root == true && target.isNotEmpty() && main?.second != target && !mon.aliasOn)
+            w.add(Warn(1, "Your target IP $target is NOT active. The phone has ${main?.second ?: "no address"}. Nothing this app did has put the target in place yet.", keepHome))
 
         // ---- bands and mode ----
         val enabled = enabledBands()
