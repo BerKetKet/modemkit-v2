@@ -65,3 +65,4 @@ Major stability, modern Android 15 (Evolution X) compatibility, and remote autom
 
 ## [Unreleased]
 - Docs: corrected the false UID 1001 root cause in the 3.0 notes and the README.
+- Added TESTING.md, a per-feature checklist.
