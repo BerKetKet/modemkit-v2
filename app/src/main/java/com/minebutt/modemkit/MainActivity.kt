@@ -487,7 +487,7 @@ class MainActivity : Activity() {
         }
         val pb = CellScan.bandNumber(active.earfcn)
         if (enabled != null && pb != null && pb !in enabled)
-            w.add(Warn(2, "Cell profile “${active.name}” is on B$pb, but B$pb is not enabled in the modem, so it cannot hold that cell. Enable it on the Bands page.", setOf(Scope.BANDS, Scope.CELLS)))
+            w.add(Warn(if (prefs.getString("exp_cell", null) == active.name) 2 else 0, "Cell profile “${active.name}” is on B$pb, but B$pb is not enabled in the modem, so it cannot hold that cell. Enable it on the Bands page.", setOf(Scope.BANDS, Scope.CELLS)))
 
         // ---- IP routes ----
         if (mon.hookOn) {
