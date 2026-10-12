@@ -163,8 +163,15 @@ class MainActivity : Activity() {
                 "chmod 644 $dir/q/*.so 2>&1; " +
                 "cp ${at.absolutePath} $dir/at.sh 2>&1; chmod 755 $dir/at.sh 2>&1; " +
                 "echo \"modem libraries copied: \$(ls $dir/q | wc -l)\""
-            rep.append(su(setupCmd).trim())
+            rep.append(su(setupCmd).trim()).append("\n")
         } catch (e: Exception) { rep.append("helper script failed: ${e.message}") }
+        try {
+            val tmp = File(cacheDir, "deps_resolve")
+            assets.open("deps_resolve").use { i -> tmp.outputStream().use { o -> i.copyTo(o) } }
+            rep.append(su("cp ${tmp.absolutePath} $dir/deps_resolve 2>&1; chmod 700 $dir/deps_resolve 2>&1; /system/bin/sh $dir/deps_resolve $dir 2>&1").trim()).append("\n")
+        } catch (e: Exception) {
+            rep.append("deps_resolve: NOT inside the app (${e.message}).\n")
+        }
         return rep.toString().trim()
     }
 

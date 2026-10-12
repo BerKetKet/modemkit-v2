@@ -67,3 +67,4 @@ Major stability, modern Android 15 (Evolution X) compatibility, and remote autom
 - Docs: corrected the false UID 1001 root cause in the 3.0 notes and the README.
 - Added TESTING.md, a per-feature checklist.
 - Home no longer turns RED because of a selected cell profile whose band is not enabled, unless a cell lock was actually requested for it.
+- Vendor library dependencies are now resolved by the app (deps_resolve), replacing the manual deps.sh.

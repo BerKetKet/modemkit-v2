@@ -1,0 +1,29 @@
+#!/system/bin/sh
+# Copies the Qualcomm libraries that qband and qwds need from /vendor/lib64
+# into $D/q, following their dependencies. Never overwrites an existing file.
+# Only writes inside $D/q.
+D=${1:-/data/local/tmp}
+Q=$D/q
+S=$Q/.seen
+mkdir -p $Q
+: > $S
+changed=1
+while [ $changed = 1 ]; do
+  changed=0
+  for f in $Q/*.so $D/qband $D/qwds; do
+    [ -e "$f" ] || continue
+    for n in $(grep -ao 'lib[A-Za-z0-9_.+-]*\.so' "$f" | sort -u); do
+      grep -qx "$n" $S && continue
+      echo "$n" >> $S
+      if [ -e $Q/$n ]; then
+        echo "have       $n"
+      elif [ -e /vendor/lib64/$n ]; then
+        cp /vendor/lib64/$n $Q/$n && chmod 644 $Q/$n && echo "copied     $n" && changed=1
+      elif [ -e /system/lib64/$n ]; then
+        echo "system     $n"
+      else
+        echo "UNRESOLVED $n"
+      fi
+    done
+  done
+done
