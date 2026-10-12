@@ -33,6 +33,10 @@ check_device() {
     fi
 }
 
+shq() {
+    printf "'%s'" "${1//\'/\'\\\'\'}"
+}
+
 send_cmd() {
     local cmd="$1"
     shift
@@ -42,7 +46,10 @@ send_cmd() {
     "$ADB" shell su -c "rm -f $TMP_DIR/modemkit.out" >/dev/null 2>&1 || true
 
     # Send broadcast to CliReceiver
-    "$ADB" shell am broadcast -a "$ACTION" -n "$RECEIVER" --es cmd "$cmd" "${extras[@]}" >/dev/null 2>&1 || true
+    local line="am broadcast -a $ACTION -n $RECEIVER --es cmd $(shq "$cmd")"
+    local a
+    for a in "${extras[@]}"; do line+=" $(shq "$a")"; done
+    "$ADB" shell "$line" >/dev/null 2>&1 || true
     
     # Wait for output file (up to 15s)
     local i=0
