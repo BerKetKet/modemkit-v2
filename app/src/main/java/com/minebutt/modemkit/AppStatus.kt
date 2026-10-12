@@ -174,9 +174,9 @@ internal fun MainActivity.driftWarnings(): List<Warn> {
     val w = ArrayList<Warn>()
     val s = setOf(Scope.HOME, Scope.BANDS)
     for ((_, text) in mon.drift) w.add(Warn(2, text, s))
-    val newTowers = newTowersSinceScan()
-    if (newTowers > 0 && !ScanState.running) {
-        w.add(Warn(0, "The phone now sees $newTowers tower${if (newTowers == 1) "" else "s"} the last scan did not see. " +
+    val newCells = newCellsSinceScan()
+    if (newCells > 0 && !ScanState.running) {
+        w.add(Warn(0, "The phone now sees $newCells new cell${if (newCells == 1) "" else "s"} the last scan did not see. " +
             "Scan this location again to refresh the band list.", setOf(Scope.BANDS)))
     }
     mon.lockFailed?.let { w.add(Warn(2, "The last band lock attempt failed even after a retry ($it). Look at the Logs tab; a carrier setting or another app may be blocking it.", s)) }

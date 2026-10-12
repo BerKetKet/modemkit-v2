@@ -1,0 +1,30 @@
+diag: CreateWaitThread (13357) created
+service list: rc=0 entries=1 services=1
+qmi_client_init rc=0
+current preference:
+  LTE band mask: 0x40
+  EXT masks: 0x40 0x0 0x0 0x0
+  MODE pref: 0x10
+cell location info: 161 bytes
+  TLV 0x02 len 4: 00 00 00 00
+  -> result=0 error=0
+  TLV 0x13 len 99: 00 36 f6 10 c6 2b 99 99 b9 01 22 0b 8b 01 00 00 00 00 08 8b 01 84 ff 98 fb d9 fc 00 00 c6 00 38 ff 2e fb 55 fc 00 00 7c 01 38 ff 38 fb 75 fc 00 00 e9 00 38 ff 3e fb 6c fc 00 00 cd 01 38 ff 36 fb 71 fc 00 00 79 00 58 ff 6f fb 76 fc 00 00 c8 00 38 ff 3a fb 55 fc 00 00 6f 00 38 ff 2b fb 76 fc 00 00
+  LTE intra-frequency: idle=0 tac=11206 eci=28940697 (tower 113049 cell 153) earfcn=2850 serving pci=395 cells=8
+      PCI 395 RSRP -112.8 RSRQ -12.4 RSSI -80.7 srxlev 0
+      PCI 198 RSRP -123.4 RSRQ -20.0 RSSI -93.9 srxlev 0
+      PCI 380 RSRP -122.4 RSRQ -20.0 RSSI -90.7 srxlev 0
+      PCI 233 RSRP -121.8 RSRQ -20.0 RSSI -91.6 srxlev 0
+      PCI 461 RSRP -122.6 RSRQ -20.0 RSSI -91.1 srxlev 0
+      PCI 121 RSRP -116.9 RSRQ -16.8 RSSI -90.6 srxlev 0
+      PCI 200 RSRP -122.2 RSRQ -20.0 RSSI -93.9 srxlev 0
+      PCI 111 RSRP -123.7 RSRQ -20.0 RSSI -90.6 srxlev 0
+  TLV 0x14 len 2: 00 00
+  LTE inter-frequency: idle=0 frequencies=0
+  TLV 0x15 len 2: 00 00
+  TLV 0x16 len 2: 00 00
+  TLV 0x1e len 4: 03 00 00 00
+  TLV 0x26 len 2: ff ff
+  TLV 0x27 len 4: 22 0b 00 00
+  TLV 0x28 len 1: 00
+  TLV 0x2a len 4: 03 00 00 00
+  TLV 0x2c len 4: 01 00 00 00

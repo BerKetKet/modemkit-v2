@@ -56,7 +56,7 @@ class CliReceiver : BroadcastReceiver() {
                         else act.startScanFromCli()
                     }
                     "local" -> act?.scanSummary() ?: "Modem Kit is not running."
-                    "towers" -> act?.towersReport() ?: "Modem Kit is not running."
+                    "seen" -> act?.seenReport() ?: "Modem Kit is not running."
                     "setting" -> handleSetting(act, intent.getStringExtra("key") ?: "", intent.getStringExtra("value") ?: "")
                     "set_target_ip" -> {
                         val ip = intent.getStringExtra("ip") ?: ""
@@ -82,7 +82,7 @@ class CliReceiver : BroadcastReceiver() {
                         }
                         "Hook updated: on=$on reason='$r' addr='$addr' apn='$apn'"
                     }
-                    else -> "unknown command '$cmd'. Valid: status, cell, bands, set_bands, restore_bands, set_mode, poll, logs, report, prepare, exec, set_target_ip, hook, scan, local, towers, setting"
+                    else -> "unknown command '$cmd'. Valid: status, cell, bands, set_bands, restore_bands, set_mode, poll, logs, report, prepare, exec, set_target_ip, hook, scan, local, seen, setting"
                 }
 
                 writeOut("modemkit.out", out)

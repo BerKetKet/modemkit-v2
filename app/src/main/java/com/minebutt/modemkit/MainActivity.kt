@@ -389,7 +389,7 @@ class MainActivity : Activity() {
             mon.modem = CellScan.parseModem(mo)
         }
         if (out.contains("@@reg") || out.contains("@@modem")) trackRadio()
-        if (out.contains("@@modem")) recordTowers()
+        if (out.contains("@@modem")) recordCells()
 
         // The helper tools install themselves once, as soon as root works and they are missing.
         if (root && (tools == false || prefs.getInt("tools_ver", 0) != toolsVer) && !autoSetupTried && !busy) {

@@ -29,8 +29,8 @@ internal fun MainActivity.buildSettings(): LinearLayout {
         "then puts your current lock back. It asks first each time."), 4)
     val lastText = note("")
     place.addM(lastText, 8)
-    val towerText = note("")
-    place.addM(towerText, 6)
+    val cellText = note("")
+    place.addM(cellText, 6)
     val scanBtn = btn("Scan this location", 1) { startLocationScan() }
     place.addM(scanBtn, 8)
     place.addM(Switch(this).apply {
@@ -51,9 +51,10 @@ internal fun MainActivity.buildSettings(): LinearLayout {
             else -> "Last scan " + SimpleDateFormat("d MMM HH:mm", Locale.US).format(Date(at)) + ": " +
                 (if (found.isEmpty()) "no bands found." else found.joinToString(", ") { "B$it" })
         }
-        val fresh = newTowersSinceScan()
-        towerText.text = "Towers this phone has measured: ${towerDb().size}." +
-            (if (at != 0L && fresh > 0) " $fresh of them were not there at the last scan." else "")
+        val fresh = newCellsSinceScan()
+        cellText.text = "Cells measured on this phone: ${cellDb().size}. " +
+            "Serving towers you have camped on: ${servedDb().size}." +
+            (if (at != 0L && fresh > 0) " $fresh were not seen at the last scan." else "")
     }
     s.addM(place, 10)
 

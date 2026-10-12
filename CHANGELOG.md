@@ -73,19 +73,20 @@ Everything since 3.1.1. The 3.0, 3.1 and 3.1.1 notes above are unchanged.
 - New gear button (⚙ Settings) in the title bar, next to Help.
 - **Show theoretical bands** (off by default). Theoretical bands are bands the modem supports but nothing around you has shown.
 - **Show only bands found here** (off by default). Shows only the bands from the last location scan.
-- Shows the last scan time and the bands it found, the number of towers measured, and how many the last scan missed.
+- Shows the last scan time and the bands it found, the number of cells measured, and how many the last scan missed.
 
 **Location scan**
-- **Scan this location** measures what is really around the phone. It switches every band on for about 45 seconds, records the bands and towers it sees, then puts the lock back the way it was.
+- **Scan this location** measures what is really around the phone. It switches every band on for about 45 seconds, records the bands and cells it sees, then puts the lock back the way it was.
 - Asks for confirmation first, and nothing changes until you press Scan.
 - Refuses to run when root or the helper tools are missing, when the radio scanner is off, when "Keep across reboots" is on, when the modem's bands have not been read, or when another band command is running.
 - Auto-repair pauses during a scan so it cannot fight the unlock.
 - If the app is closed during a scan, the previous lock is put back the next time the app starts.
 - A scan that measures nothing keeps the previous result.
 
-**Tower memory and rescan reminder**
-- Every tower the modem measures is saved on the phone (up to 2000, oldest dropped first).
-- The Bands page shows an info note when the phone measures towers the last scan did not see. The note clears after the next scan.
+**Cell memory, serving towers, and rescan reminder**
+- Every cell the modem measures is saved on the phone (up to 2000, oldest dropped first). A cell is identified by EARFCN and PCI, because the modem does not report a tower ID for neighbour cells.
+- The tower ID of the cell you camp on is also saved (up to 500). That gives a real count of the towers you have actually used.
+- The Bands page shows an info note when the phone measures cells the last scan did not see. The note clears after the next scan.
 
 **Band descriptions**
 - Each band on the Bands page has a plain-language line: frequency, duplex type (FDD or TDD), and what it is good for (reach, capacity, or download only).
@@ -101,7 +102,7 @@ Everything since 3.1.1. The 3.0, 3.1 and 3.1.1 notes above are unchanged.
 **PC command line (`modemkit-cli`)**
 - `./modemkit-cli scan --yes` — run a location scan. Without `--yes` it refuses, because the scan switches every band on for about 45 seconds.
 - `./modemkit-cli local` — last scan time, bands found here, and the two band settings.
-- `./modemkit-cli towers` — towers measured on the phone, how many the last scan missed, and the 30 most recent.
+- `./modemkit-cli seen` — cells measured on the phone, how many the last scan missed, the serving towers you have camped on, and the 30 most recent cells.
 - `./modemkit-cli setting [show_theory|show_local on|off]` — show both settings, or change one.
 
 **Vendor libraries**
@@ -130,6 +131,7 @@ Everything since 3.1.1. The 3.0, 3.1 and 3.1.1 notes above are unchanged.
 
 ### Known limits
 
+- Neighbour cells are counted by EARFCN and PCI. The modem query does not report their tower IDs, so two neighbour cells may belong to the same tower or to different ones.
 - The band list belongs to the phone, not to a place. After you move, the list is from the old spot until you scan again. The reminder tells you when that is likely.
 - A scan is a snapshot of what the modem can measure at that moment. The result can differ at another time of day.
 - A scan drops the connection for a short time. Do not run one during a call or a download.

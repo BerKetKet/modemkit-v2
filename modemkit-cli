@@ -92,7 +92,7 @@ usage() {
     echo -e "  ${C_CYAN}raw <cmd>${C_RESET}              Execute arbitrary root command on the device"
     echo -e "  ${C_CYAN}scan --yes${C_RESET}             Scan this location: all bands on for ~45 s, then the lock is put back"
     echo -e "  ${C_CYAN}local${C_RESET}                  Last location scan, bands found here, and the settings that use them"
-    echo -e "  ${C_CYAN}towers${C_RESET}                 Towers this phone has measured, and how many the last scan missed"
+    echo -e "  ${C_CYAN}seen${C_RESET}                   Cells this phone has measured, what the last scan missed, and serving towers"
     echo -e "  ${C_CYAN}setting [name on|off]${C_RESET}  Show or change show_theory / show_local (no arguments: show both)"
     echo
 }
@@ -176,8 +176,8 @@ case "$CMD" in
     local)
         send_cmd "local"
         ;;
-    towers)
-        send_cmd "towers"
+    seen)
+        send_cmd "seen"
         ;;
     setting)
         send_cmd "setting" --es key "${1:-}" --es value "${2:-}"

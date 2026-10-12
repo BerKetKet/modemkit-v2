@@ -14,29 +14,42 @@ internal object ScanState {
 internal val scanUi = Handler(Looper.getMainLooper())
 internal const val SCAN_RESTORE = "scan_restore"
 
-// A tower is "earfcn/pci" for each measured cell the modem reports.
-internal fun MainActivity.towerKeys(): Set<String> =
+// A cell is "earfcn/pci". The modem reports neighbours by these two only, with no tower ID.
+internal fun MainActivity.cellKeys(): Set<String> =
     mon.modem?.cells?.filter { it.pci >= 0 }?.map { "${it.earfcn}/${it.pci}" }?.toSet() ?: emptySet()
 
-// Every tower this phone has measured. Kept across restarts, newest last, capped at 2000.
-internal fun MainActivity.towerDb(): LinkedHashSet<String> =
-    LinkedHashSet((prefs.getString("towers", "") ?: "").split(",").filter { it.isNotBlank() })
+// Cells this phone has measured. Kept across restarts, newest last, capped at 2000.
+// Reads the older "towers" key once, so earlier data is not lost.
+internal fun MainActivity.cellDb(): LinkedHashSet<String> {
+    val raw = prefs.getString("cells", null) ?: prefs.getString("towers", "") ?: ""
+    return LinkedHashSet(raw.split(",").filter { it.isNotBlank() })
+}
 
-// Called on every modem poll: adds whatever is measured now to the database.
-internal fun MainActivity.recordTowers() {
-    val now = towerKeys()
-    if (now.isEmpty()) return
-    val db = towerDb()
-    if (db.addAll(now)) {
-        prefs.edit().putString("towers", db.toList().takeLast(2000).joinToString(",")).apply()
+// Serving towers (eNodeB IDs) this phone has camped on. Only the cell you camp on has a known tower ID.
+internal fun MainActivity.servedDb(): LinkedHashSet<String> =
+    LinkedHashSet((prefs.getString("served_towers", "") ?: "").split(",").filter { it.isNotBlank() })
+
+// Called on every modem poll: saves the cells measured now, and the tower of the cell you camp on.
+internal fun MainActivity.recordCells() {
+    val now = cellKeys()
+    val db = cellDb()
+    if (now.isNotEmpty() && db.addAll(now)) {
+        prefs.edit().putString("cells", db.toList().takeLast(2000).joinToString(",")).apply()
+    }
+    val eci = mon.modem?.ci ?: 0L
+    if (eci > 0) {
+        val served = servedDb()
+        if (served.add((eci shr 8).toString())) {
+            prefs.edit().putString("served_towers", served.toList().takeLast(500).joinToString(",")).apply()
+        }
     }
 }
 
-// How many towers measured now were not seen by the last scan. 0 if no scan has been done.
-internal fun MainActivity.newTowersSinceScan(): Int {
-    val scanned = prefs.getString("scan_towers", null) ?: return 0
+// How many cells measured now were not seen by the last scan. 0 if no scan has been done.
+internal fun MainActivity.newCellsSinceScan(): Int {
+    val scanned = prefs.getString("scan_cells", null) ?: prefs.getString("scan_towers", null) ?: return 0
     val before = scanned.split(",").filter { it.isNotBlank() }.toSet()
-    return towerKeys().count { it !in before }
+    return cellKeys().count { it !in before }
 }
 
 // Why a scan cannot start right now, or null if it can. Shared by the button and the CLI.
@@ -80,19 +93,19 @@ private fun MainActivity.beginScan(restore: String) {
     prefs.edit().putString(SCAN_RESTORE, restore).apply()
     addLog("action", "Location scan started", "Every band is switched on for about 45 seconds. The lock is put back afterwards.")
     val seen = HashSet<Int>()
-    val towers = HashSet<String>()
+    val cells = HashSet<String>()
     val started = System.currentTimeMillis()
     runBands("Scan: switch all bands on", "$qband set all", false, 0, repair = true)
     fun sample() {
         seen.addAll(seenBands().map { it.band })
-        towers.addAll(towerKeys())
+        cells.addAll(cellKeys())
         if (System.currentTimeMillis() - started < 45_000) scanUi.postDelayed({ sample() }, 5_000)
-        else finishScan(restore, seen, towers)
+        else finishScan(restore, seen, cells)
     }
     scanUi.postDelayed({ sample() }, 8_000)
 }
 
-private fun MainActivity.finishScan(restore: String, seen: Set<Int>, towers: Set<String>) {
+private fun MainActivity.finishScan(restore: String, seen: Set<Int>, cells: Set<String>) {
     val found = seen.filter { !Radio.isInternal(it) }.sorted()
     if (found.isEmpty()) {
         addLog("info", "Location scan found nothing", "No bands were measured, so the earlier result is kept.")
@@ -100,10 +113,10 @@ private fun MainActivity.finishScan(restore: String, seen: Set<Int>, towers: Set
         prefs.edit()
             .putString("local_bands", found.joinToString(","))
             .putLong("local_scan_at", System.currentTimeMillis())
-            .putString("scan_towers", towers.joinToString(","))
+            .putString("scan_cells", cells.joinToString(","))
             .apply()
         addLog("action", "Location scan finished", "Bands found here: " + Radio.bandList(found) +
-            " (" + towers.size + " towers). Putting the lock back.")
+            " (" + cells.size + " cells). Putting the lock back.")
     }
     runBands("Scan: put the lock back", restore, false, 0, repair = true)
     scanUi.postDelayed({
@@ -136,13 +149,15 @@ internal fun MainActivity.scanSummary(): String {
         "Scan running: " + (if (ScanState.running) "yes" else "no")
 }
 
-// Text for "modemkit-cli towers".
-internal fun MainActivity.towersReport(): String {
-    val db = towerDb().toList()
-    val recent = db.takeLast(30).reversed().joinToString("\n") {
+// Text for "modemkit-cli seen".
+internal fun MainActivity.seenReport(): String {
+    val cells = cellDb().toList()
+    val recent = cells.takeLast(30).reversed().joinToString("\n") {
         "  EARFCN ${it.substringBefore("/")}, PCI ${it.substringAfter("/")}"
     }
-    return "Towers measured on this phone: ${db.size}\n" +
-        "Not seen at the last scan: ${newTowersSinceScan()}\n" +
-        (if (db.isEmpty()) "No towers recorded yet." else "Most recent first (up to 30):\n" + recent)
+    return "Cells measured on this phone: ${cells.size}\n" +
+        "Not seen at the last scan: ${newCellsSinceScan()}\n" +
+        "Serving towers you have camped on: ${servedDb().size}\n" +
+        "Neighbour cells are identified by EARFCN and PCI only, because the modem does not report their tower IDs.\n" +
+        (if (cells.isEmpty()) "No cells recorded yet." else "Most recent first (up to 30):\n" + recent)
 }
