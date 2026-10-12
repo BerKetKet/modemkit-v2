@@ -135,7 +135,7 @@ class MainActivity : Activity() {
 
     internal fun prepare(): String {
         val rep = StringBuilder()
-        for (n in listOf("qwds", "qband")) {
+        for (n in listOf("qwds", "qband", "qwds_run", "qband_run")) {
             try {
                 val tmp = File(cacheDir, n)
                 assets.open(n).use { i -> tmp.outputStream().use { o -> i.copyTo(o) } }
@@ -147,19 +147,11 @@ class MainActivity : Activity() {
         }
         try {
             val at = File(cacheDir, "at.sh").apply { writeText(atSh) }
-            val qbRun = "#!/system/bin/sh\nexec su 1001 -c \"env LD_LIBRARY_PATH=$dir/q $dir/qband \\\"\\\$@\\\"\" dummy \"\$@\"\n"
-            val qwRun = "#!/system/bin/sh\nexec su 1001 -c \"env LD_LIBRARY_PATH=$dir/q $dir/qwds \\\"\\\$@\\\"\" dummy \"\$@\"\n"
-            val fQb = File(cacheDir, "qband_run").apply { writeText(qbRun) }
-            val fQw = File(cacheDir, "qwds_run").apply { writeText(qwRun) }
-
             val setupCmd = "mkdir -p $dir/q 2>&1; " +
                 "for f in /vendor/lib64/libqmi*.so /vendor/lib64/libdiag.so /vendor/lib64/libdsutils.so /vendor/lib64/libidl.so /vendor/lib64/libmdmdetect.so; do " +
                 "[ -e \$f ] && cp \$f $dir/q/ 2>&1; done; " +
-                "chmod 644 $dir/q/*.so 2>&1; chmod 666 /dev/diag 2>/dev/null; " +
+                "chmod 644 $dir/q/*.so 2>&1; " +
                 "cp ${at.absolutePath} $dir/at.sh 2>&1; chmod 755 $dir/at.sh 2>&1; " +
-                "cp ${fQb.absolutePath} $dir/qband_run 2>&1; chmod 755 $dir/qband_run 2>&1; " +
-                "cp ${fQw.absolutePath} $dir/qwds_run 2>&1; chmod 755 $dir/qwds_run 2>&1; " +
-                "magiskpolicy --live \"allow shell shell socket { create read write ioctl }\" \"allow shell sysfs_msm_subsys dir { read open search }\" \"allow shell vendor_file file { read open getattr execute }\" 2>/dev/null; " +
                 "echo \"modem libraries copied: \$(ls $dir/q | wc -l)\""
             rep.append(su(setupCmd).trim())
         } catch (e: Exception) { rep.append("helper script failed: ${e.message}") }

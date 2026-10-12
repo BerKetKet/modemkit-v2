@@ -1,0 +1,13 @@
+#!/system/bin/sh
+d=/data/local/tmp
+b=$(basename "$0"); b=${b%_run}
+o=$(LD_LIBRARY_PATH=$d/q "$d/$b" "$@" 2>&1)
+case "$o" in
+  *"send failed"*|*"init"*"failed"*)
+    o2=$(su 1001 -c "LD_LIBRARY_PATH=$d/q $d/$b \"\$@\"" dummy "$@" 2>&1)
+    case "$o2" in
+      *"send failed"*|*"init"*"failed"*) printf '%s\n' "$o"; echo "[retry as uid 1001 also gave an error]"; printf '%s\n' "$o2" ;;
+      *) echo "[note: ran as uid 1001 because root was refused]"; printf '%s\n' "$o2" ;;
+    esac ;;
+  *) printf '%s\n' "$o" ;;
+esac
